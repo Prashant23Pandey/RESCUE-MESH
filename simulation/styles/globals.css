@@ -1,0 +1,13 @@
+/* globals.css */
+
+html, body, #__next {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure Leaflet map occupies full viewport */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}

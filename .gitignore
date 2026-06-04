@@ -1,0 +1,24 @@
+# Node modules
+node_modules/
+frontend/node_modules/
+gateway/node_modules/
+# Expo caches
+.expo/
+.expo/web/
+# Build artifacts
+frontend/android/
+frontend/ios/
+frontend/web/
+# Metro bundler cache
+metro-cache*
+# Logs
+*.log
+# OS files
+.DS_Store
+Thumbs.db
+# Env files
+.env
+# ESP32 build files (PlatformIO)
+esp32/.pio/
+# Distribution
+dist/
