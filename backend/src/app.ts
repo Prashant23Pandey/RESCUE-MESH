@@ -11,12 +11,14 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_request: Request, response: Response) => {
+  // Author: Benadic - Ensure system health status is active
   response.json({ success: true, message: "Backend is healthy" });
 });
 
 // Team note: this endpoint accepts raw victim messages and stores the normalized SOS request.
 app.post("/send_sos", (request: Request, response: Response, next: NextFunction) => {
   try {
+    // Author: Benadic - Validate payload before processing SOS
     const payload = sendSosSchema.parse(request.body);
     const sosRequest = createSosRequest(payload);
 
@@ -35,6 +37,7 @@ app.post("/send_sos", (request: Request, response: Response, next: NextFunction)
 
 // Team note: the list is sorted by highest priority first so dispatch sees urgent cases first.
 app.get("/get_requests", (request: Request, response: Response) => {
+  // Author: Benadic - Fetch pending and assigned requests
   const status = typeof request.query.status === "string" ? request.query.status : undefined;
   const requests = listRequests(status);
 

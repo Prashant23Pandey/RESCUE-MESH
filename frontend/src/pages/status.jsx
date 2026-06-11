@@ -9,10 +9,11 @@ export default function StatusCheck() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Author: Benadic - Checking the status of an existing request
   const handleCheck = async (e) => {
     e.preventDefault();
     if (!requestId.trim()) return;
-    
+
     setError(null);
     setRequestData(null);
     setLoading(true);
@@ -21,76 +22,83 @@ export default function StatusCheck() {
       const res = await axios.get(`${API_URL}/get_requests`);
       const requests = res.data.data || [];
       const found = requests.find(r => r.id === requestId.trim());
-      
+
+      // Author: Benadic - Update state based on search result
       if (found) {
         setRequestData(found);
       } else {
         setError("No SOS request found with that ID.");
       }
     } catch (err) {
-      setError("Error checking status: " + (err.response?.data?.error || err.message));
+      setError("Connection error: " + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
     }
   };
 
+  // Author: Benadic - Rendering status lookup interface
   return (
-    <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-      <h2 style={{ marginTop: 0 }}>Check SOS Status</h2>
-      <p style={{ color: 'var(--text-secondary)' }}>Enter your Request ID to see if help is on the way.</p>
+    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+      <h2 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '700' }}>Check Request Status</h2>
 
-      <form onSubmit={handleCheck} className="flex gap-4" style={{ marginBottom: '20px' }}>
-        <input 
-          type="text" 
-          value={requestId} 
-          onChange={(e) => setRequestId(e.target.value)} 
-          placeholder="Enter Request ID (e.g. req_12345)" 
-          required 
-          style={{ flex: 1 }}
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? 'Checking...' : 'Check Status'}
-        </button>
-      </form>
+      <div className="card">
+        <form onSubmit={handleCheck} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          <input
+            type="text"
+            value={requestId}
+            onChange={(e) => setRequestId(e.target.value)}
+            placeholder="Enter Request ID"
+            required
+            style={{ flex: 1 }}
+          />
+          <button type="submit" disabled={loading}>
+            {loading ? 'Checking...' : 'Check Status'}
+          </button>
+        </form>
 
-      {error && (
-        <div style={{ color: 'var(--critical)', padding: '10px', backgroundColor: 'rgba(248, 81, 73, 0.1)', borderRadius: '6px' }}>
-          {error}
-        </div>
-      )}
-
-      {requestData && (
-        <div style={{ padding: '20px', backgroundColor: 'var(--bg-dark)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-          <h3 style={{ marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
-            Status: 
-            <span style={{ color: requestData.status === 'assigned' ? 'var(--low)' : 'var(--high)' }}>
-              {requestData.status.toUpperCase()}
-            </span>
-          </h3>
-          
-          <div style={{ margin: '15px 0' }}>
-            <strong>Severity:</strong> <span className={`badge ${requestData.severityLabel}`}>{requestData.severityLabel.toUpperCase()}</span>
+        {error && (
+          <div style={{ color: 'var(--critical)', padding: '12px', background: 'rgba(229, 83, 75, 0.05)', borderLeft: '3px solid var(--critical)', fontSize: '13px', marginBottom: '16px' }}>
+            {error}
           </div>
-          
-          <div style={{ margin: '10px 0' }}>
-            <strong>Message:</strong> {requestData.message}
-          </div>
-          <div style={{ margin: '10px 0' }}>
-            <strong>Location:</strong> {requestData.location?.area}
-          </div>
+        )}
 
-          {requestData.status === 'assigned' && (
-            <div style={{ marginTop: '20px', padding: '10px', backgroundColor: 'rgba(63, 185, 80, 0.1)', border: '1px solid var(--low)', borderRadius: '6px' }}>
-              <strong>✅ A resource has been assigned to your location and is on the way.</strong>
+        {requestData && (
+          <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius)', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '600' }}>Status</span>
+              <span style={{ fontWeight: '700', fontSize: '12px', color: requestData.status === 'assigned' ? 'var(--low)' : 'var(--high)', textTransform: 'uppercase' }}>
+                {requestData.status}
+              </span>
             </div>
-          )}
-          {requestData.status === 'pending' && (
-            <div style={{ marginTop: '20px', padding: '10px', backgroundColor: 'rgba(210, 153, 34, 0.1)', border: '1px solid var(--high)', borderRadius: '6px' }}>
-              <strong>⏳ Your request is in the queue. Responders will assign resources shortly.</strong>
+
+            <div style={{ display: 'grid', gap: '12px', fontSize: '13px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Severity</span>
+                <span className={`badge ${requestData.severityLabel}`}>{requestData.severityLabel}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Message</span>
+                <span style={{ textAlign: 'right', maxWidth: '70%' }}>{requestData.message}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Location</span>
+                <span>{requestData.location?.area}</span>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+
+            {requestData.status === 'assigned' && (
+              <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(70, 149, 74, 0.05)', borderLeft: '3px solid var(--low)', fontSize: '13px', color: 'var(--text-primary)' }}>
+                Resource assigned and dispatched.
+              </div>
+            )}
+            {requestData.status === 'pending' && (
+              <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(210, 153, 34, 0.05)', borderLeft: '3px solid var(--high)', fontSize: '13px', color: 'var(--text-primary)' }}>
+                Request queued. Pending dispatch.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
