@@ -1,31 +1,43 @@
-# RESCUE-MESH
+# RESCUE-MESH 🚨
 
-Modular Decentralized Response Framework (MDRF) – Phase 1 MVP implementation.
+A Modular Decentralized Response Framework designed to ensure life-critical aid reaches victims even during "Information Blackouts" when cellular networks collapse.
 
-## Overview
-- **Frontend** – React Native (Expo) with offline‑first UI for Victim SOS triage and Responder dashboard.
-- **Gateway** – Node.js/Express command node running on a Raspberry Pi or laptop, hosting REST & WebSocket APIs, TensorFlow‑Lite inference, and Yjs CRDT sync.
-- **ESP32 LoRa Bridge** – Firmware to forward Bluetooth/BLE packets over LoRaWAN mesh.
-- **Docs** – Architecture diagrams, API specs, and connectivity guides.
+---
 
-## Quick Start
+## 👥 Team Contributions
+
+### 📱 Member 1: Frontend & App UI
+**Directory:** `frontend/`
+- **Responsibilities:** Built the Ground-Zero User Interface.
+- **Deliverables:** SOS Submission Form, Responder Dashboard, Live Emergency Map View, and Status Checker. Connected the UI to the backend API.
+- **Tech:** React & Next.js
+
+### 🧠 Member 2: AI + Priority Engine
+**Directory:** `backend/src/ai_engine.py`
+- **Responsibilities:** Designed the autonomous triaging system to reduce Response Latency.
+- **Deliverables:** Implemented the `calculate_priority(request)` function using an NLP Keyword Classifier. Automatically converts emergency text into a 0-100 severity score and assigns CRITICAL/HIGH/MEDIUM/LOW labels.
+
+### ⚙️ Member 3: Backend + Database
+**Directory:** `backend/`
+- **Responsibilities:** Built the core infrastructure, API logic, and resource ledger.
+- **Deliverables:** Created Node.js/Express API endpoints (`/send_sos`, `/get_requests`, `/assign_resource`). Managed the in-memory database to store SOS requests and handle logistics/assignment logic.
+
+---
+
+## 🚀 How to Start the Project
+
+**1. Start the Backend API (Port 4000)**
 ```bash
-# Clone
-git clone https://github.com/Prashant23Pandey/RESCUE-MESH.git
-cd RESCUE-MESH
-
-# Frontend
-git submodule update --init --recursive
-npm install --prefix frontend
-npm start --prefix frontend   # Expo dev server
-
-# Gateway
-npm install --prefix gateway
-npm run dev --prefix gateway   # Starts Express + Yjs websocket
-
-# ESP32 Firmware (requires PlatformIO)
-cd esp32
-platformio run -t upload
+cd backend
+npm install
+npm run dev
 ```
 
-See `docs/` for detailed architecture and API contracts.
+**2. Start the Frontend UI (Port 3000)**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Visit **[http://localhost:3000](http://localhost:3000)** to view the application.
