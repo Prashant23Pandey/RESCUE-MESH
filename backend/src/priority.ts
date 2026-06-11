@@ -1,54 +1,59 @@
+/* Authors: BENADIC90, Member 1, Member 2, Member 3 */
+// Team note: Core logic for calculating SOS priority scores based on predefined rules.
 import { SosRequestInput } from "./types";
 
-const KEYWORD_WEIGHTS: Array<{ pattern: RegExp; weight: number }> = [
-  { pattern: /\b(trapped|collapsed|buried)\b/i, weight: 35 },
-  { pattern: /\b(unconscious|bleeding|critical|not breathing)\b/i, weight: 35 },
-  { pattern: /\b(fire|explosion|burning)\b/i, weight: 30 },
-  { pattern: /\b(child|children|pregnant|elderly)\b/i, weight: 15 },
-  { pattern: /\b(injured|fracture|pain|medical)\b/i, weight: 20 },
-  { pattern: /\b(no food|hungry|water|stranded)\b/i, weight: 10 }
-];
+export function clampPriority(score: number): number {
+  return Math.max(0, Math.min(100, score));
+}
+
+export function generateAiSummary(input: SosRequestInput): string {
+  let summary = "";
+  const findings: string[] = [];
+
+  if (/\b(trapped|collapsed|buried|stuck)\b/i.test(input.message)) {
+    findings.push("Potential entrapment");
+  }
+  if (/\b(fire|burn|smoke)\b/i.test(input.message)) {
+    findings.push("Fire hazard");
+  }
+  if (/\b(bleed|blood|unconscious|injury|hurt)\b/i.test(input.message)) {
+    findings.push("Medical emergency");
+  }
+  if (/\b(water|flood|drown)\b/i.test(input.message)) {
+    findings.push("Water rescue");
+  }
+
+  if (findings.length > 0) {
+    summary = findings.join(", ") + " detected. ";
+  }
+
+  if (input.peopleCount && input.peopleCount > 10) {
+    summary += "Mass casualty event. ";
+  }
+
+  return summary || "Standard emergency request.";
+}
 
 export function calculatePriority(input: SosRequestInput): number {
-  if (typeof input.priorityScore === "number") {
-    return clampPriority(input.priorityScore);
+  let score = input.priorityScore ?? 50;
+
+  if (input.peopleCount) {
+    if (input.peopleCount > 100) score += 40;
+    else if (input.peopleCount > 10) score += 20;
+    else if (input.peopleCount > 5) score += 10;
   }
 
-  let score = 20;
-
-  for (const rule of KEYWORD_WEIGHTS) {
-    if (rule.pattern.test(input.message)) {
-      score += rule.weight;
-    }
-  }
-
-  if (input.peopleCount && input.peopleCount > 1) {
-    score += Math.min(input.peopleCount * 3, 20);
-  }
-
-  if (input.neededResources?.includes("ambulance")) {
-    score += 10;
-  }
+  const message = input.message.toLowerCase();
+  if (message.includes("trapped") || message.includes("fire")) score += 30;
+  if (message.includes("unconscious") || message.includes("bleeding")) score += 25;
+  if (message.includes("food") || message.includes("water")) score += 10;
 
   return clampPriority(score);
 }
 
-export function deriveSeverityLabel(priorityScore: number): "low" | "medium" | "high" | "critical" {
-  if (priorityScore >= 85) {
-    return "critical";
-  }
-
-  if (priorityScore >= 65) {
-    return "high";
-  }
-
-  if (priorityScore >= 40) {
-    return "medium";
-  }
-
+export function deriveSeverityLabel(score: number): "low" | "medium" | "high" | "critical" {
+  if (score >= 80) return "critical";
+  if (score >= 60) return "high";
+  if (score >= 40) return "medium";
   return "low";
-}
-
-function clampPriority(score: number): number {
-  return Math.max(0, Math.min(100, Math.round(score)));
 }

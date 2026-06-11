@@ -1,12 +1,18 @@
+/* Authors: BENADIC90, Member 1, Member 2, Member 3 */
+// Team note: This is the main Command Dashboard for dispatchers.
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import io from 'socket.io-client';
 
 const API_URL = 'http://localhost:4000';
+const socket = io(API_URL);
 
 export default function Dashboard() {
   const [requests, setRequests] = useState([]);
   const [resources, setResources] = useState([]);
+  const [selectedResources, setSelectedResources] = useState({});
 
+  // Team note: Fetches latest SOS requests and resource states from the backend
   const fetchData = async () => {
     try {
       const [reqRes, resRes] = await Promise.all([
@@ -22,18 +28,55 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000); // Auto refresh
-    return () => clearInterval(interval);
+    
+    socket.on("sos_created", (newSos) => {
+      setRequests(prev => [newSos, ...prev].sort((a, b) => b.priorityScore - a.priorityScore));
+    });
+
+    socket.on("resource_assigned", (assignment) => {
+      fetchData(); // Simplest way to refresh both requests and resources
+    });
+
+    return () => {
+      socket.off("sos_created");
+      socket.off("resource_assigned");
+    };
   }, []);
 
+  // Team note: Submits selected resources for dispatch. Empty array triggers backend Auto-Assign.
   const handleAssign = async (requestId) => {
     try {
-      await axios.post(`${API_URL}/assign_resource`, { requestId });
+      const resourceIds = selectedResources[requestId] || [];
+      await axios.post(`${API_URL}/assign_resource`, { 
+        requestId, 
+        ...(resourceIds.length > 0 && { resourceIds })
+      });
       fetchData();
+      // Clear selection after dispatch
+      setSelectedResources(prev => ({ ...prev, [requestId]: [] }));
     } catch (err) {
       alert("Error assigning resource: " + (err.response?.data?.error || err.message));
     }
   };
+
+  const toggleResource = (reqId, resId) => {
+    setSelectedResources(prev => {
+      const current = prev[reqId] || [];
+      if (current.includes(resId)) {
+        return { ...prev, [reqId]: current.filter(id => id !== resId) };
+      } else {
+        return { ...prev, [reqId]: [...current, resId] };
+      }
+    });
+  };
+
+  const resourceStats = resources.reduce((acc, res) => {
+    if (!acc[res.type]) acc[res.type] = { total: 0, available: 0, dispatched: 0 };
+    acc[res.type].total++;
+    if (res.available) acc[res.type].available++;
+    else acc[res.type].dispatched++;
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -52,7 +95,7 @@ export default function Dashboard() {
                   <tr>
                     <th>Severity</th>
                     <th>Area</th>
-                    <th>Message</th>
+                    <th>Message & AI Summary</th>
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
@@ -66,7 +109,19 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td>{req.location.area}</td>
-                      <td>{req.message}</td>
+                      <td>
+                        <div>{req.message}</div>
+                        {req.aiSummary && (
+                          <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--high)', fontStyle: 'italic' }}>
+                            🤖 {req.aiSummary}
+                          </div>
+                        )}
+                        {req.neededResources && req.neededResources.length > 0 && (
+                          <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            <strong>Requested:</strong> {req.neededResources.join(', ')}
+                          </div>
+                        )}
+                      </td>
                       <td>
                         {req.status === 'pending' ? (
                           <span style={{ color: 'var(--text-secondary)' }}>Pending</span>
@@ -76,9 +131,29 @@ export default function Dashboard() {
                       </td>
                       <td>
                         {req.status === 'pending' && (
-                          <button onClick={() => handleAssign(req.id)} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                            Auto-Assign
-                          </button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <div style={{ maxHeight: '100px', overflowY: 'auto', border: '1px solid var(--border-color)', padding: '5px', borderRadius: '4px', background: 'var(--bg-dark)' }}>
+                              {resources.filter(r => r.available).length === 0 && <span style={{fontSize: '12px', color:'gray'}}>No units available</span>}
+                              {resources.filter(r => r.available).map(r => (
+                                <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', marginBottom: '4px' }}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={(selectedResources[req.id] || []).includes(r.id)}
+                                    onChange={() => toggleResource(req.id, r.id)}
+                                  />
+                                  <span>{r.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                            <button onClick={() => handleAssign(req.id)} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                              Dispatch Selected ({selectedResources[req.id]?.length || 0})
+                            </button>
+                            {(!selectedResources[req.id] || selectedResources[req.id].length === 0) && (
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                (Leave empty to Auto-Assign)
+                              </div>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -92,6 +167,26 @@ export default function Dashboard() {
         <div style={{ flex: 1 }}>
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Resource Pool</h3>
+            
+            {/* Fleet Statistics Widget */}
+            <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '6px' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Fleet Statistics</h4>
+              {Object.keys(resourceStats).length === 0 ? (
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No statistics available.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {Object.entries(resourceStats).map(([type, stats]) => (
+                    <div key={type} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
+                      <strong style={{ textTransform: 'capitalize' }}>{type.replace('_', ' ')}</strong>
+                      <span style={{ color: 'var(--text-secondary)' }}>
+                        Total: {stats.total} | <span style={{ color: 'var(--low)' }}>Avail: {stats.available}</span> | Dispatched: {stats.dispatched}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {resources.length === 0 ? (
               <p style={{ color: 'var(--text-secondary)' }}>No resources available.</p>
             ) : (

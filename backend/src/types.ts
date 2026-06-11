@@ -1,3 +1,4 @@
+/* Authors: BENADIC90, Member 1, Member 2, Member 3 */
 export type RequestStatus = "pending" | "assigned";
 
 export type ResourceType =
@@ -22,6 +23,7 @@ export interface SosRequestInput {
   neededResources?: ResourceType[];
   priorityScore?: number;
   severityLabel?: "low" | "medium" | "high" | "critical";
+  aiSummary?: string;
 }
 
 export interface SosRequest extends SosRequestInput {
@@ -29,8 +31,9 @@ export interface SosRequest extends SosRequestInput {
   status: RequestStatus;
   priorityScore: number;
   severityLabel: "low" | "medium" | "high" | "critical";
+  aiSummary?: string;
   createdAt: string;
-  assignedResourceId?: string;
+  assignedResourceIds?: string[];
 }
 
 export interface Resource {
@@ -43,5 +46,5 @@ export interface Resource {
 
 export interface AssignmentResult {
   request: SosRequest;
-  resource: Resource;
+  resources: Resource[];
 }

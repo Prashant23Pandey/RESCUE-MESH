@@ -1,5 +1,14 @@
+/* Authors: BENADIC90, Member 1, Member 2, Member 3 */
+// Team note: This is the main SOS submission form for victims.
 import { useState } from 'react';
 import axios from 'axios';
+import dynamic from 'next/dynamic';
+import { useAppStore } from '../store/appStore';
+
+const MapComponent = dynamic(() => import('../components/MapComponent'), {
+  ssr: false,
+  loading: () => <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Loading map preview...</p>
+});
 
 const API_URL = 'http://localhost:4000';
 
@@ -10,6 +19,7 @@ export default function SosForm() {
   const [isLocating, setIsLocating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const { isOffline, cacheOfflineRequest } = useAppStore();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,6 +44,7 @@ export default function SosForm() {
     });
   };
 
+  // Team note: Attempts to fetch GPS coordinates and reverse geocode them into a real address
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser");
@@ -41,11 +52,32 @@ export default function SosForm() {
     }
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
+        const lat = position.coords.latitude.toFixed(6);
+        const lng = position.coords.longitude.toFixed(6);
+        
+        let areaName = '';
+        try {
+          // Reverse geocoding via OpenStreetMap
+          const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+          if (res.data && res.data.address) {
+            const addr = res.data.address;
+            const street = addr.road || addr.suburb || '';
+            const city = addr.city || addr.town || addr.village || '';
+            const state = addr.state || '';
+            const postcode = addr.postcode || '';
+            
+            areaName = [street, city, state, postcode].filter(Boolean).join(', ');
+          }
+        } catch (e) {
+          console.error("Geocoding failed:", e);
+        }
+
         setFormData(prev => ({
           ...prev,
-          lat: position.coords.latitude.toFixed(6),
-          lng: position.coords.longitude.toFixed(6)
+          lat,
+          lng,
+          area: areaName || prev.area // Autofill address if found
         }));
         setIsLocating(false);
       },
@@ -56,6 +88,7 @@ export default function SosForm() {
     );
   };
 
+  // Team note: Handles submitting the SOS request, parsing numeric fields, and handling offline caching
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -73,6 +106,20 @@ export default function SosForm() {
       peopleCount: formData.peopleCount ? parseInt(formData.peopleCount, 10) : undefined,
       neededResources: formData.neededResources.length > 0 ? formData.neededResources : undefined
     };
+
+    if (isOffline) {
+      cacheOfflineRequest(payload);
+      setResult({
+        id: 'local_' + Math.random().toString(36).substr(2, 9),
+        status: 'pending',
+        priorityScore: 50,
+        severityLabel: 'CACHED OFFLINE'
+      });
+      setFormData({
+        reporterName: '', contactNumber: '', area: '', lat: '', lng: '', message: '', peopleCount: 1, neededResources: []
+      });
+      return;
+    }
 
     try {
       const res = await axios.post(`${API_URL}/send_sos`, payload);
@@ -92,6 +139,21 @@ export default function SosForm() {
       {result && (
         <div className="card" style={{ borderColor: 'var(--low)', backgroundColor: 'rgba(63, 185, 80, 0.1)' }}>
           <h3 style={{ margin: '0 0 10px 0', color: 'var(--low)' }}>Successfully Submitted!</h3>
+          <p style={{ margin: '0 0 5px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <strong>Request ID: </strong>
+            <span style={{ userSelect: 'all', background: 'var(--bg-dark)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace' }}>
+              {result.id}
+            </span>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(result.id);
+                alert("Request ID copied to clipboard!");
+              }}
+              style={{ padding: '2px 8px', fontSize: '12px', cursor: 'pointer', backgroundColor: 'var(--bg-dark)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+            >
+              📋 Copy
+            </button>
+          </p>
           <p style={{ margin: 0 }}>Severity: <span className={`badge ${result.severityLabel}`}>{result.severityLabel.toUpperCase()}</span></p>
           <p style={{ margin: '5px 0 0 0' }}>Priority Score: {result.priorityScore}</p>
         </div>
@@ -114,14 +176,31 @@ export default function SosForm() {
           <input type="text" name="area" value={formData.area} onChange={handleChange} required placeholder="e.g. Sector 7" />
         </div>
 
-        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button type="button" onClick={handleGetLocation} disabled={isLocating} style={{ backgroundColor: 'var(--border-color)', color: 'var(--text-primary)' }}>
-            {isLocating ? '📍 Locating...' : '📍 Auto-detect My Exact Location'}
-          </button>
+        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <button type="button" onClick={handleGetLocation} disabled={isLocating} style={{ backgroundColor: 'var(--border-color)', color: 'var(--text-primary)' }}>
+              {isLocating ? '📍 Locating...' : '📍 Auto-detect My Exact Location'}
+            </button>
+            {(formData.lat && formData.lng) && (
+              <span style={{ color: 'var(--low)', fontSize: '14px', fontWeight: 'bold' }}>
+                ✓ GPS Coordinates Captured
+              </span>
+            )}
+          </div>
+          
           {(formData.lat && formData.lng) && (
-            <span style={{ color: 'var(--low)', fontSize: '14px', fontWeight: 'bold' }}>
-              ✓ GPS Coordinates Captured
-            </span>
+            <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+              <MapComponent 
+                height="200px" 
+                requests={[{
+                  id: 'preview',
+                  status: 'pending',
+                  severityLabel: 'high',
+                  location: { lat: parseFloat(formData.lat), lng: parseFloat(formData.lng) },
+                  message: 'Your current location'
+                }]} 
+              />
+            </div>
           )}
         </div>
 

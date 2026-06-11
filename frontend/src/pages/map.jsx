@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import io from 'socket.io-client';
 
 // Dynamically import Map component to avoid SSR issues with Leaflet
 const MapComponent = dynamic(() => import('../components/MapComponent'), {
@@ -9,6 +10,7 @@ const MapComponent = dynamic(() => import('../components/MapComponent'), {
 });
 
 const API_URL = 'http://localhost:4000';
+const socket = io(API_URL);
 
 export default function MapView() {
   const [requests, setRequests] = useState([]);
@@ -23,6 +25,19 @@ export default function MapView() {
       }
     };
     fetchRequests();
+
+    socket.on("sos_created", (newSos) => {
+      setRequests(prev => [newSos, ...prev]);
+    });
+
+    socket.on("resource_assigned", () => {
+      fetchRequests();
+    });
+
+    return () => {
+      socket.off("sos_created");
+      socket.off("resource_assigned");
+    };
   }, []);
 
   return (

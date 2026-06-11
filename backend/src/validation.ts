@@ -1,3 +1,4 @@
+/* Authors: BENADIC90, Member 1, Member 2, Member 3 */
 import { z } from "zod";
 
 const resourceTypes = [
@@ -25,5 +26,5 @@ export const sendSosSchema = z.object({
 
 export const assignResourceSchema = z.object({
   requestId: z.string().trim().min(1),
-  resourceId: z.string().trim().min(1).optional()
+  resourceIds: z.array(z.string().trim().min(1)).optional()
 });

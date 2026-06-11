@@ -1,3 +1,4 @@
+/* Authors: BENADIC90, Member 1, Member 2, Member 3 */
 import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
@@ -18,6 +19,10 @@ app.post("/send_sos", (request: Request, response: Response, next: NextFunction)
   try {
     const payload = sendSosSchema.parse(request.body);
     const sosRequest = createSosRequest(payload);
+
+    if (request.app.locals.io) {
+      request.app.locals.io.emit("sos_created", sosRequest);
+    }
 
     response.status(201).json({
       success: true,
@@ -53,7 +58,11 @@ app.get("/resources", (_request: Request, response: Response) => {
 app.post("/assign_resource", (request: Request, response: Response, next: NextFunction) => {
   try {
     const payload = assignResourceSchema.parse(request.body);
-    const assignment = assignResource(payload.requestId, payload.resourceId);
+    const assignment = assignResource(payload.requestId, payload.resourceIds);
+
+    if (request.app.locals.io) {
+      request.app.locals.io.emit("resource_assigned", assignment);
+    }
 
     response.json({
       success: true,
@@ -74,15 +83,16 @@ app.use((error: unknown, _request: Request, response: Response, _next: NextFunct
     return;
   }
 
-  if (error instanceof Error) {
-    const errorMap: Record<string, { status: number; message: string }> = {
-      REQUEST_NOT_FOUND: { status: 404, message: "SOS request not found" },
-      REQUEST_ALREADY_ASSIGNED: { status: 409, message: "SOS request is already assigned" },
-      RESOURCE_NOT_FOUND: { status: 404, message: "No matching resource found" },
-      RESOURCE_UNAVAILABLE: { status: 409, message: "Selected resource is unavailable" }
-    };
+    if (error instanceof Error) {
+      const err = error as Error;
+      const errorMap: Record<string, { status: number; message: string }> = {
+        REQUEST_NOT_FOUND: { status: 404, message: "SOS request not found" },
+        REQUEST_ALREADY_ASSIGNED: { status: 409, message: "SOS request is already assigned" },
+        RESOURCE_NOT_FOUND: { status: 404, message: "No matching resource found" },
+        RESOURCE_UNAVAILABLE: { status: 409, message: "Selected resource is unavailable" }
+      };
 
-    const mapped = errorMap[error.message];
+      const mapped = errorMap[err.message];
     if (mapped) {
       response.status(mapped.status).json({
         success: false,
