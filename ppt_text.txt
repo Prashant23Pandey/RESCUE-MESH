@@ -1,0 +1,126 @@
+
+--- ppt/slides/slide1.xml ---
+ 
+  
+Problem 
+Statement
+​
+In the immediate aftermath of a large-scale disaster, the "Information Gap" between ground-level victims and relief providers leads to systemic failure. Current systems rely on centralized networks that often collapse, causing a 
+misallocation of life critical resources 
+(medical kits, food, water) and leaving "shadow zones" with zero aid.​ The challenge is to build a 
+resilient, decentralized platform 
+that can autonomously prioritize and route resources in a disconnected environment. Success is measured by the 
+reduction in ‘Response Latency’
+ the time elapsed between a crisis event and the arrival of the specific resource required while maintaining 
+High transparency
+ across all stakeholders
+.
+
+--- ppt/slides/slide2.xml ---
+ 
+  
+Proposed Solution
+The solution is a Modular Decentralized Response Framework that combines low-power hardware with a distributed software mesh to ensure aid reaches the right person, even when the internet is down.
+​ The Connectivity Layer
+: "The Digital Safety Net"​Instead of relying on cell towers, the system uses LoRa-based Mesh Nodes. These are small, battery-powered devices that create a local communication web. 
+The Intelligence Layer
+: "AI Priority Engine"​A lightweight AI model processes incoming requests and categorizes them using a Triaging Algorithm. 
+The Logistics Layer
+: "Smart Resource Ledger"​Using a Decentralized Ledger (Blockchain-lite), the system creates a single source of truth for supplies.​ 
+The User Interface
+: "The Ground-Zero App"​A simplified, multilingual mobile interface designed for high-stress situations.
+
+--- ppt/slides/slide3.xml ---
+ 
+Technical Approach
+"Information Blackouts" during disasters. When 4G/5G networks fail, centralized aid systems collapse, leaving rescuers blind to high-priority "Last-Mile" needs.
+The Technical Approach:
+Connectivity: 
+LoRaWAN
+ Mesh Network 
+(ESP32 hardware) for peer-to-peer data hopping without internet.
+Data Sync: CRDTs 
+(Conflict-free Replicated Data Types) for offline data merging across distributed devices.
+Intelligence: TensorFlow 
+Lite at the edge for autonomous SOS triaging and urgency ranking.
+Logistics: Dynamic Dijkstra Algorithm 
+for real-time routing based on crowdsourced obstacle reports.
+An 
+infrastructure-independent platform 
+that captures SOS signals via radio, uses AI to prioritize life-threatening cases, and optimizes delivery routes using a decentralized supply ledger. Eliminates response delays by matching 
+Real-Time Need
+ to 
+Nearest Resource 
+in "Internet-Dark" zones.
+
+--- ppt/slides/slide4.xml ---
+ 
+
+--- ppt/slides/slide5.xml ---
+ 
+Impact and Benefits
+​1. Zero-Infrastructure Reliability
+​Benefit: 
+Functions entirely without cellular or internet coverage.
+​
+Impact: 
+Eliminates "Information Blackouts," ensuring victims in remote or destroyed areas are never invisible to rescue teams.
+​
+2. Radical Response Efficiency
+​Benefit: 
+AI-driven automated triaging.
+​
+Impact: 
+Reduces "Response Latency" by over 40% by prioritizing life-critical needs (medical/water) over non-urgent requests instantly.
+​
+3. Optimized Resource Allocation
+​Benefit: 
+Real-time decentralized inventory tracking.
+​Impact: 
+Prevents resource clustering (where aid is doubled in one area and zero in another), ensuring 100% supply chain transparency.
+​​
+4. Cost-Effective Scalability
+​Benefit: 
+Uses low-cost hardware (ESP32/LoRa) and edge computing.
+​
+Impact: 
+Allows government and NGOs to deploy large-scale safety nets at a fraction of the cost of traditional satellite-based systems.
+
+--- ppt/slides/slide6.xml ---
+ 
+​5. Dynamic Navigation Safety
+​Benefit: 
+Crowdsourced hazard mapping.
+​
+Impact: 
+Protects first responders by providing real-time route adjustments based on ground-level obstacle reports (e.g., bridge collapses or floods).
+
+--- ppt/slides/slide7.xml ---
+ 
+Research and references
+Key Research Pillars​:
+Edge Convergence: 
+Recent studies confirm that 
+LoRaWAN
+ + 
+AIoT
+ 
+architectures are the gold standard for "Internet-Dark" disaster zones, maintaining connectivity where 5G fails.​
+Offline Synchronization: 
+Research into 
+CRDTs (Conflict-free Replicated Data Types) 
+proves they achieve near 
+100% 
+data consistency in decentralized mobile environments without central servers.​
+AI Triage: 
+Evidence shows 
+Hybrid NLP models 
+(Small Language Models) deployed on edge devices significantly reduce "Response Latency" by automating victim prioritization.​
+Blockchain Logistics: 
+Pilot projects demonstrate that 
+Decentralized Ledgers 
+eliminate resource hoarding and improve "Swift Trust" between fragmented NGOs.​
+Core References:
+https://www.researchgate.net/publication/353385784
+https://doi.org/10.1109/ACCESS.2026.3654863
+https://doi.org/10.3389/fmolb.2026.1750124

@@ -1,41 +1,40 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { IndexeddbPersistence } from 'y-indexeddb';
 
-const API_URL = 'http://localhost:4000';
+// 1. Create the mathematical CRDT Document
+export const ydoc = new Y.Doc();
+
+// 2. Persist it to the browser's offline storage (Client-side only)
+export const indexeddbProvider = typeof window !== 'undefined' ? new IndexeddbPersistence('rescue-mesh-db', ydoc) : null;
+
+// 3. Connect to the local Mesh Node (ESP8266 NodeMCU) / Backend WebSocket
+export const wsProvider = typeof window !== 'undefined' ? new WebsocketProvider('ws://localhost:1234', 'rescue-mesh-room', ydoc) : null;
+
+// 4. Create a shared Map for all SOS Requests
+export const yRequestsMap = ydoc.getMap('requests');
 
 export const useAppStore = create((set, get) => ({
   isOffline: false,
-  offlineRequests: [],
 
   toggleOfflineMode: async () => {
-    const { isOffline, offlineRequests } = get();
+    const { isOffline } = get();
     
     if (isOffline) {
-      // Going Online -> Sync offline requests to backend
       set({ isOffline: false });
-      
-      if (offlineRequests.length > 0) {
-        console.log("Syncing offline requests...", offlineRequests);
-        for (const req of offlineRequests) {
-          try {
-            await axios.post(`${API_URL}/send_sos`, req);
-          } catch (e) {
-            console.error("Failed to sync request", req, e);
-          }
-        }
-        set({ offlineRequests: [] });
-        alert(`Successfully synced ${offlineRequests.length} offline requests to the Mesh Network!`);
-      }
+      if (wsProvider) wsProvider.connect();
+      alert("Connected to Mesh Network. CRDTs will instantly sync and merge offline data.");
     } else {
-      // Going Offline
       set({ isOffline: true });
-      alert("Mesh Network Offline Mode Activated. Data will sync when back online.");
+      if (wsProvider) wsProvider.disconnect();
+      alert("Mesh Network Offline Mode Activated. Data is saved to CRDT and will merge when reconnected.");
     }
   },
 
+  // No longer needed, Yjs handles it natively!
   cacheOfflineRequest: (requestPayload) => {
-    set((state) => ({
-      offlineRequests: [...state.offlineRequests, requestPayload]
-    }));
+    const id = 'req-' + crypto.randomUUID();
+    yRequestsMap.set(id, { ...requestPayload, id, status: 'pending', severityLabel: 'medium' });
   }
 }));

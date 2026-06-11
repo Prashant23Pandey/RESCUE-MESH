@@ -23,19 +23,7 @@ L.Icon.Default.mergeOptions({
 // A simulated Base Station where responders are dispatched from
 const BASE_STATION = [28.6139, 77.2090]; // New Delhi, India
 
-const createCustomIcon = (severity) => {
-  let color = '#3fb950'; // green
-  if (severity === 'critical') color = '#f85149'; // red
-  else if (severity === 'high') color = '#ff7b72'; // light red/orange
-  else if (severity === 'medium') color = '#d29922'; // yellow
 
-  return L.divIcon({
-    className: 'custom-icon',
-    html: `<div style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
-  });
-};
 
 
 // Team note: Custom hook component to intercept the map instance and draw routes

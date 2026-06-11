@@ -3,6 +3,35 @@
 import { randomUUID } from "node:crypto";
 import { calculatePriority, deriveSeverityLabel, generateAiSummary } from "./priority";
 import { AssignmentResult, Resource, SosRequest, SosRequestInput } from "./types";
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import WebSocket from 'ws';
+
+// Connect backend to the Yjs Mesh Network
+const ydoc = new Y.Doc();
+const wsProvider = new WebsocketProvider('ws://localhost:1234', 'rescue-mesh-room', ydoc, { WebSocketPolyfill: WebSocket });
+export const yRequestsMap = ydoc.getMap('requests');
+
+yRequestsMap.observe((event, transaction) => {
+  if (transaction.origin === 'backend-triage') return;
+
+  event.changes.keys.forEach((change, key) => {
+    if (change.action === 'add' || change.action === 'update') {
+      const req = yRequestsMap.get(key) as SosRequest;
+      
+      // If a new SOS request arrives without AI triage, process it instantly
+      if (req && req.priorityScore === undefined) {
+        const priorityScore = calculatePriority(req);
+        const severityLabel = req.severityLabel ?? deriveSeverityLabel(priorityScore);
+        const aiSummary = generateAiSummary(req);
+
+        ydoc.transact(() => {
+          yRequestsMap.set(key, { ...req, priorityScore, severityLabel, aiSummary, createdAt: new Date().toISOString() });
+        }, 'backend-triage');
+      }
+    }
+  });
+});
 
 const BASE_RESOURCES = [
   { name: "Ambulance", type: "ambulance", area: "Sector 7", available: true },
@@ -21,32 +50,26 @@ const INITIAL_RESOURCES: Resource[] = BASE_RESOURCES.flatMap((base) =>
   }))
 );
 
-let requests: SosRequest[] = [];
 let resources: Resource[] = cloneResources();
 
 export function createSosRequest(input: SosRequestInput): SosRequest {
-  const priorityScore = calculatePriority(input);
-  const severityLabel = input.severityLabel ?? deriveSeverityLabel(priorityScore);
-
+  const id = randomUUID();
   const request: SosRequest = {
     ...input,
-    id: randomUUID(),
-    priorityScore,
-    severityLabel,
-    aiSummary: generateAiSummary(input),
+    id,
     status: "pending",
-    createdAt: new Date().toISOString()
-  };
-
-  requests = [...requests, request];
+  } as SosRequest;
+  
+  // Pushing to Yjs map triggers the observer above!
+  yRequestsMap.set(id, request);
   return request;
 }
 
 export function listRequests(status?: string): SosRequest[] {
-  return requests
+  const allReqs = Array.from(yRequestsMap.values()) as SosRequest[];
+  return allReqs
     .filter((request) => !status || request.status === status)
-    .slice()
-    .sort((a, b) => b.priorityScore - a.priorityScore);
+    .sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
 }
 
 export function listResources(): Resource[] {
@@ -55,7 +78,7 @@ export function listResources(): Resource[] {
 
 // Team note: Validates and assigns multiple resources to an SOS request, or auto-assigns best fallback.
 export function assignResource(requestId: string, resourceIds?: string[]): AssignmentResult {
-  const request = requests.find((item) => item.id === requestId);
+  const request = yRequestsMap.get(requestId) as SosRequest;
   if (!request) {
     throw new Error("REQUEST_NOT_FOUND");
   }
@@ -93,7 +116,7 @@ export function assignResource(requestId: string, resourceIds?: string[]): Assig
     assignedResourceIds: selectedResources.map(r => r.id)
   };
 
-  requests = requests.map((item) => (item.id === request.id ? updatedRequest : item));
+  yRequestsMap.set(request.id, updatedRequest);
 
   return {
     request: updatedRequest,
@@ -102,7 +125,7 @@ export function assignResource(requestId: string, resourceIds?: string[]): Assig
 }
 
 export function resetStore(): void {
-  requests = [];
+  Array.from(yRequestsMap.keys()).forEach(key => yRequestsMap.delete(key));
   resources = cloneResources();
 }
 

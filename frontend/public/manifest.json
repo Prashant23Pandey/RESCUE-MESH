@@ -1,0 +1,16 @@
+{
+  "name": "RESCUE-MESH Offline SOS",
+  "short_name": "RESCUE-MESH",
+  "description": "Offline Disaster Mesh Network Application",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#f85149",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
